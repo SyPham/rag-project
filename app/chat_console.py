@@ -1,15 +1,5 @@
 import requests
-from qdrant_client import QdrantClient
 
-client = QdrantClient(url="http://localhost:6333")
-
-points = client.scroll(
-    collection_name="documents",
-    limit=5
-)
-
-for p in points[0]:
-    print(p.payload)
 API_URL = "http://localhost:8000/chat"
 
 def chat():
@@ -21,10 +11,9 @@ def chat():
         doc_id = None
 
     while True:
-        question = input("\nYou: ")
-
-        if question.lower() in ["exit", "quit"]:
-            print("Bye 👋")
+        question = input("\nYou: ").strip()
+        if question.lower() in {"exit", "quit"}:
+            print("Bye")
             break
 
         try:
@@ -32,21 +21,24 @@ def chat():
                 API_URL,
                 json={
                     "question": question,
-                    "doc_id": doc_id
+                    "doc_id": doc_id,
                 },
-                timeout=60
+                timeout=120,
             )
 
+            print(f"\nSTATUS: {res.status_code}")
+            print(f"RAW: {res.text}\n")
+
+            res.raise_for_status()
             data = res.json()
 
-            print("\nAI:", data.get("answer"))
+            print("AI:", data.get("answer"))
 
-            # show sources
             sources = data.get("sources", [])
             if sources:
                 print("\nSources:")
                 for s in sources:
-                    print(f"- Doc: {s['doc_id']} | Page: {s['page']}")
+                    print(f"- Doc: {s.get('doc_id')} | Page: {s.get('page')}")
 
         except Exception as e:
             print("Error:", str(e))
